@@ -47,7 +47,7 @@ There are two kinds:
 | `workload` | The whole environment: the image the sandbox boots from, including the agent. Replaces v2's `kind: sandbox`. | A full root filesystem. A workload **must** have a recipe. |
 | `mixin` | A delta layered onto a workload: extra tools, credentials, hooks, egress. | An overlay (`FROM scratch`), or no recipe at all for a declaration-only kit. |
 
-This repo ships **32 workloads and 71 mixins**. Every workload except `openhands-canvas` has a `-mixin` sibling declaring the same capabilities in overlay form, so an agent can either *be* the sandbox or be layered onto one; the remaining 40 mixins are standalone tools and integrations. See the [Kit index](#kit-index).
+This repo ships **33 workloads and 76 mixins**. Every workload except `openhands-canvas` and `shell` has a `-mixin` sibling declaring the same capabilities in overlay form, so an agent can either *be* the sandbox or be layered onto one; the remaining 45 mixins are standalone tools and integrations. See the [Kit index](#kit-index).
 
 ## Anatomy of a kit
 
@@ -62,7 +62,7 @@ This repo ships **32 workloads and 71 mixins**. Every workload except `openhands
 
 A kit's Hub logo comes from the descriptor's `iconUrl`: the overview job downloads it and uploads it to the kit's repository, the same way `README.md` becomes the overview, and keeps it in sync. Point it at an image the vendor hosts. Logo files are not kept in this repository: they are third-party trademarks and this tree is Apache-2.0. A kit without `iconUrl` keeps whatever logo its repository already has.
 
-The descriptor and the recipe pair by **filename stem**: `claude.yaml` looks for `claude.dockerfile` beside it. Naming a recipe that does not exist is an error; *not having* the conventional companion just means a declaration-only kit, which is legal for a `kind: mixin` and rejected for a `kind: workload`. Fourteen mixins here are declaration-only — they contribute credentials, egress and hooks without shipping bits.
+The descriptor and the recipe pair by **filename stem**: `claude.yaml` looks for `claude.dockerfile` beside it. Naming a recipe that does not exist is an error; *not having* the conventional companion just means a declaration-only kit, which is legal for a `kind: mixin` and rejected for a `kind: workload`. Twelve mixins here are declaration-only — they contribute credentials, egress and hooks without shipping bits.
 
 There is no `spec.yaml`, no plain `Dockerfile`, no `testdata/tck.yaml` and no `.dockerignore`. The build context is the kit's own directory and a `dockerfile:` path may not escape it, so a mixin cannot reach an asset sitting in its workload sibling's directory — a shared script has to be copied into both.
 
@@ -204,7 +204,7 @@ A handful of kits genuinely cannot be pinned: an installer whose only channel kn
 
 `provides` is what a kit offers by name; `requires` is a **closed-set** check against everything composed together, so a name nothing provides makes the kit refuse to compose anywhere rather than only where it would really have failed.
 
-v2 could express exactly one dependency — `requires: {agent: <name>}` — so a kit whose hook ran `apt-get` or called `jq` said nothing about needing them and simply failed at create on a base that lacked them. v3 kits can say it, because publishing a `kind: workload` kit reads the built content's dpkg (or apk) database and derives one provide per installed package under `deb/` or `apk/` (SPEC-v3 §9.6). Nineteen mixins here require derived names — `deb/jq`, `deb/dpkg`, `deb/docker-ce`, `deb/openssh-client`:
+v2 could express exactly one dependency — `requires: {agent: <name>}` — so a kit whose hook ran `apt-get` or called `jq` said nothing about needing them and simply failed at create on a base that lacked them. v3 kits can say it, because publishing a `kind: workload` kit reads the built content's dpkg (or apk) database and derives one provide per installed package under `deb/` or `apk/` (SPEC-v3 §9.6). Seventeen mixins here require derived names — `deb/jq`, `deb/dpkg`, `deb/docker-ce`, `deb/openssh-client`:
 
 ```yaml
 requires: ["claude", "deb/jq", "deb/openssl >= 3.5"]
@@ -362,7 +362,7 @@ Note that a fork PR does not receive repository secrets, so any leg needing Dock
 
 ## Kit index
 
-103 kits: 32 workloads and 71 mixins. Every workload except `openhands-canvas` has a `-mixin` sibling that declares the same capabilities in overlay form, so you can either boot the agent as the sandbox or layer it onto one.
+109 kits: 33 workloads and 76 mixins. Every workload except `openhands-canvas` and `shell` has a `-mixin` sibling that declares the same capabilities in overlay form, so you can either boot the agent as the sandbox or layer it onto one.
 
 ### Workloads
 
@@ -396,6 +396,7 @@ Note that a fork PR does not receive repository secrets, so any leg needing Dock
 | [`paperclip`](./paperclip) | [`paperclip-mixin`](./paperclip-mixin) | Paperclip |
 | [`pi`](./pi) | [`pi-mixin`](./pi-mixin) | Pi |
 | [`picoclaw`](./picoclaw) | [`picoclaw-mixin`](./picoclaw-mixin) | PicoClaw |
+| [`shell`](./shell) | — | A hardened Debian sandbox with a Docker engine, a login shell and no agent: the base an agent mixin layers onto |
 | [`trivy`](./trivy) | [`trivy-mixin`](./trivy-mixin) | Trivy vulnerability scanner |
 | [`vibe`](./vibe) | [`vibe-mixin`](./vibe-mixin) | Mistral Vibe |
 | [`zeroclaw`](./zeroclaw) | [`zeroclaw-mixin`](./zeroclaw-mixin) | ZeroClaw |
@@ -414,6 +415,7 @@ Note that a fork PR does not receive repository secrets, so any leg needing Dock
 | [`code-server`](./code-server) | `claude` | code-server on port 8080 with the Claude Code VS Code extension |
 | [`codex-acp`](./codex-acp) | `codex` | The Codex ACP adapter over stdio |
 | [`codex-app-server`](./codex-app-server) | `codex`, `deb/apt` | sshd plus forwarded host keys, so the Codex Mac GUI can drive `codex app-server` |
+| [`cosmos-db-emulator`](./cosmos-db-emulator) | `deb/curl`, `deb/docker-ce` | The Azure Cosmos DB emulator (vNext, API for NoSQL) on the sandbox's Docker Engine, with the gateway and Data Explorer published on the host loopback |
 | [`docker-tcp`](./docker-tcp) | `deb/curl`, `deb/docker-ce`, `deb/jq`, `deb/procps` | The sandbox's Docker Engine on a TCP port published on the host loopback, so host Docker clients can run containers in it |
 | [`ecc`](./ecc) | `claude` | Everything Claude Code: rules, agents, commands and skills |
 | [`git-ssh-sign`](./git-ssh-sign) | `deb/openssh-client` | Commit signing with the key forwarded from the host's SSH agent |
@@ -431,6 +433,7 @@ Note that a fork PR does not receive repository secrets, so any leg needing Dock
 | [`packages-through-sfw`](./packages-through-sfw) | — | Routes npm and pip through Socket Firewall Free |
 | [`playwright`](./playwright) | — | The Playwright toolchain with Chromium on a shared system browsers path |
 | [`qemu`](./qemu) | `deb/docker-ce` | QEMU user-mode emulators via binfmt_misc, for cross-arch builds |
+| [`shell-credentials`](./shell-credentials) | — | The eight provider credentials the built-in agentless sandbox declared, for a base that owns none of them |
 | [`smolagents`](./smolagents) | `deb/apt` | Hugging Face smolagents in an isolated virtualenv |
 | [`t3code`](./t3code) | — | The build toolchain T3 Code's SSH integration needs to compile `node-pty` |
 | [`task`](./task) | `deb/dpkg` | The Task CLI, for running Taskfiles |
